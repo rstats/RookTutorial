@@ -66,9 +66,46 @@ app <- Builder$new(
          req <- Request$new(env)
          res <- Response$new()
          datasets <- ls('package:datasets')
-         tmpdataset <- sub('^/(.*)\\.csv','\\1',req$path_info())
+         tmpdataset <- sub('^/(.*)\\.png','\\1',req$path_info())
          dataset <- datasets[datasets %in% tmpdataset][1]
          if (is.na(dataset)) dataset <- 'iris'
+         
+         res$header('Content-type','image/png')
+         #
+         t <- tempfile()
+        
+         png(t)
+         
+         	# This is a bit of magic. R has an example function
+         	# which runs example code located at the end of a
+         	# particular help topic. Fortunately, there's a help
+        	# topic for all datasets exported from the 'datasets'
+         	# package. Unfortunately, not all of them produce a plot,
+        	# and they can be noisy.
+         	#
+         	# This is where you would place your own data and plot routines, FYI
+         	#
+         	capture.output(
+         	suppressWarnings(
+         		eval(
+         			substitute(
+         				example(dataset,package='datasets',ask=FALSE),
+         				list(dataset=dataset)
+         			)
+         		)
+         	))
+         
+         
+         	dev.off()
+         	payday <- try(readBin(t,'raw',file.info(t)$size))
+         	unlink(t)
+         
+         #	if (inherits(payday,'try-error') || length(payday) <=1 ){
+         #		payday <- bad_plot(dataset)
+         #	}
+         #
+         
+         res$body <- payday
          res$finish()
       },
       '.*' = Redirect$new('/index.html')
